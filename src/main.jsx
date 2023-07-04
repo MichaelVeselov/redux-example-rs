@@ -1,41 +1,64 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 
-import { initiateStore } from './store/store';
-import * as actions from './store/actions';
+import { Provider, useSelector, useDispatch } from 'react-redux';
 
-const store = initiateStore();
+import configureStore from './store/store';
+
+import {
+  titleChanged,
+  taskDeleted,
+  completeTask,
+  loadAllTasks,
+  getTasks,
+  getTasksLoadingStatus,
+  createTask,
+} from './store/task';
+
+import { getError } from './store/errors';
+
+const store = configureStore();
 
 const App = () => {
-  const [state, setState] = useState(store.getState());
+  const state = useSelector(getTasks());
+  const isLoading = useSelector(getTasksLoadingStatus());
+  const error = useSelector(getError());
 
-  const completeTask = (taskId) => {
-    store.dispatch(actions.taskCompleted(taskId));
-  };
+  const dispatch = useDispatch();
 
   const changeTitle = (taskId) => {
-    store.dispatch(actions.titleChanged(taskId));
+    dispatch(titleChanged(taskId));
   };
 
   const deleteTask = (taskId) => {
-    store.dispatch(actions.taskDeleted(taskId));
+    dispatch(taskDeleted(taskId));
   };
 
   useEffect(() => {
-    store.subscribe(() => {
-      setState(store.getState());
-    });
+    dispatch(loadAllTasks());
+    // eslint-disable-next-line
   }, []);
+
+  if (isLoading) {
+    return <h2>Loading...</h2>;
+  }
+  if (error) {
+    return <p>{error}</p>;
+  }
 
   return (
     <>
       <h1>App...</h1>
 
+      <button onClick={() => dispatch(createTask())}>Add task</button>
+
       {state.map((item) => (
         <li key={item.id}>
           <p>{item.title}</p>
           <p>{`Completed: ${item.completed}`}</p>
-          <button onClick={() => completeTask(item.id)}>Complete</button>
+          <button onClick={() => dispatch(completeTask(item.id))}>
+            Complete
+          </button>
           <button onClick={() => changeTitle(item.id)}>Change title</button>
           <button onClick={() => deleteTask(item.id)}>Delete</button>
           <hr />
@@ -45,4 +68,8 @@ const App = () => {
   );
 };
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <Provider store={store}>
+    <App />
+  </Provider>
+);
